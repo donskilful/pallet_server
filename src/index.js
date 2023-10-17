@@ -8,8 +8,12 @@ const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const connectDb = require('./config/connectDb');
+const authRoutes = require('./routes/authRouter');
+const AppError = require('./utils/appError');
 
 const app = express();
+
+connectDb();
 
 app.use(cors());
 
@@ -37,17 +41,28 @@ app.use(xss());
 app.use(compression());
 
 // Test middleware
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   req.requestTime = new Date().toISOString();
   // console.log(req.cookies);
   next();
 });
 
-connectDb();
-
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
   console.log(`App running on port ${port}`);
+});
+
+app.get('/', (req, res) =>
+  res.status(200).json({
+    status: 'success',
+    message: `Welcome to pallet Api's`,
+  }),
+);
+
+app.use('/api/v1/auth', authRoutes);
+
+app.all('*', (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
 process.on('uncaughtException', (err) => {
